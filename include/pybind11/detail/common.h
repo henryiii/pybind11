@@ -109,9 +109,11 @@
 #  endif
 #endif
 
+extern "C" {
 #include <Python.h>
 #include <frameobject.h>
 #include <pythread.h>
+}
 
 #if defined(isalnum)
 #  undef isalnum
