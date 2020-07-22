@@ -110,6 +110,23 @@ TEST_CASE("Restart the interpreter") {
     REQUIRE(py::module::import("widget_module").attr("add")(1, 2).cast<int>() == 3);
     REQUIRE(has_pybind11_internals_builtin());
     REQUIRE(has_pybind11_internals_static());
+
+
+    auto os = py::module::import("os");
+    auto pkgutil = py::module::import("pkgutil");
+    auto ext_mod_filename = pkgutil.attr("get_loader")("external_module").attr("get_filename")();
+    WARN("FILENAME: " << py::cast<std::string>(ext_mod_filename));
+
+    auto rel_path = os.attr("path").attr("dirname")(ext_mod_filename);
+    auto test_dir = py::cast<std::string>(os.attr("path").attr("abspath")(rel_path));
+    WARN("TEST_DIR: " << test_dir);
+
+    // This is needed on Python 3.8+ and Windows, due to added security in loading DLLs from local directories
+    if (py::hasattr(os, "add_dll_directory"))  {
+        auto add_dll_dir = os.attr("add_dll_directory");
+        add_dll_dir(test_dir);
+    }
+
     REQUIRE(py::module::import("external_module").attr("A")(123).attr("value").cast<int>() == 123);
 
     // local and foreign module internals should point to the same internals:
@@ -122,6 +139,13 @@ TEST_CASE("Restart the interpreter") {
 
     py::initialize_interpreter();
     REQUIRE(Py_IsInitialized() == 1);
+    
+    // This is needed on Python 3.8+ and Windows, due to added security in loading DLLs from local directories
+    os = py::module::import("os");
+    if (py::hasattr(os, "add_dll_directory"))  {
+        auto add_dll_dir = os.attr("add_dll_directory");
+        add_dll_dir(test_dir);
+    }
 
     // Internals are deleted after a restart.
     REQUIRE_FALSE(has_pybind11_internals_builtin());
