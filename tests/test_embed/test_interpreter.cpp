@@ -121,10 +121,13 @@ TEST_CASE("Restart the interpreter") {
     auto test_dir = py::cast<std::string>(os.attr("path").attr("abspath")(rel_path));
     WARN("TEST_DIR: " << test_dir);
 
+    py::object dll_holder;
+
     // This is needed on Python 3.8+ and Windows, due to added security in loading DLLs from local directories
     if (py::hasattr(os, "add_dll_directory"))  {
         auto add_dll_dir = os.attr("add_dll_directory");
-        add_dll_dir(test_dir);
+        dll_holder = add_dll_dir(test_dir);
+        WARN("Holding");
     }
 
     REQUIRE(py::module::import("external_module").attr("A")(123).attr("value").cast<int>() == 123);
@@ -133,18 +136,21 @@ TEST_CASE("Restart the interpreter") {
     REQUIRE(reinterpret_cast<uintptr_t>(*py::detail::get_internals_pp()) ==
             py::module::import("external_module").attr("internals_at")().cast<uintptr_t>());
 
+    if(dll_holder)
+        dll_holder.attr("close")();
+
     // Restart the interpreter.
     py::finalize_interpreter();
     REQUIRE(Py_IsInitialized() == 0);
 
     py::initialize_interpreter();
     REQUIRE(Py_IsInitialized() == 1);
-    
+
     // This is needed on Python 3.8+ and Windows, due to added security in loading DLLs from local directories
     os = py::module::import("os");
     if (py::hasattr(os, "add_dll_directory"))  {
         auto add_dll_dir = os.attr("add_dll_directory");
-        add_dll_dir(test_dir);
+        dll_holder = add_dll_dir(test_dir);
     }
 
     // Internals are deleted after a restart.
@@ -155,6 +161,9 @@ TEST_CASE("Restart the interpreter") {
     REQUIRE(has_pybind11_internals_static());
     REQUIRE(reinterpret_cast<uintptr_t>(*py::detail::get_internals_pp()) ==
             py::module::import("external_module").attr("internals_at")().cast<uintptr_t>());
+
+    if(dll_holder)
+        dll_holder.attr("close")();
 
     // Make sure that an interpreter with no get_internals() created until finalize still gets the
     // internals destroyed
