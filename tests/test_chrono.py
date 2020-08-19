@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-from pybind11_tests import chrono as m
 import datetime
+
+import pytest
+
+from pybind11_tests import chrono as m
 
 
 def test_chrono_system_clock():
@@ -70,9 +73,13 @@ def test_chrono_system_clock_roundtrip_date():
     assert time2.microsecond == 0
 
 
-def test_chrono_system_clock_roundtrip_time():
-    time1 = datetime.datetime.today().time()
-
+@pytest.mark.parametrize("time1", [
+    datetime.datetime.today().time(),
+    datetime.time(0, 0, 0),
+    datetime.time(1, 0, 0),
+    datetime.time(0, 28, 45, 109827)
+])
+def test_chrono_system_clock_roundtrip_time(time1):
     # Roundtrip the time
     datetime2 = m.test_chrono2(time1)
     date2 = datetime2.date()
