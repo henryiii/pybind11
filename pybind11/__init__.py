@@ -9,4 +9,18 @@ __all__ = (
     "__version__",
     "get_include",
     "get_cmake_dir",
+    "load_ipython_extension",
+    "unload_python_extension",
 )
+
+
+def load_ipython_extension(ipython):
+    from ._ipython_ext import Pybind11Magics
+
+    ipython.register_magics(Pybind11Magics)
+
+
+def unload_ipython_extension(ipython):
+    from ._ipython_ext import Pybind11Magics
+
+    ipython.unregister_magics(Pybind11Magics)

@@ -60,6 +60,8 @@ py_files = {
     "_version.py",
     "commands.py",
     "setup_helpers.py",
+    "_ipython_ext.py",
+    "ipython-COPYING.rst",
 }
 
 headers = main_headers | detail_headers
