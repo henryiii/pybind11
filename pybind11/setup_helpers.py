@@ -171,4 +171,5 @@ class BuildExt(build_ext):
             ext.extra_link_args += link_opts
             ext.include_dirs += [DelayedPybindInclude()]
 
-        super(BuildExt, self).build_extensions()
+        # Python 2 doesn't allow super here, since it's not a "class"
+        build_ext.build_extensions(self)
