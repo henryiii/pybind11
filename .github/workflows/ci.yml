@@ -151,6 +151,9 @@ jobs:
     - name: Interface test
       run: cmake --build build2 --target test_cmake_build
 
+    - name: Setuptools helpers test
+      run: pytest tests/extra_setuptools
+
 
   clang:
     runs-on: ubuntu-latest
@@ -241,9 +244,6 @@ jobs:
 
     - name: Interface test
       run: cmake --build build --target test_cmake_build
-
-    - name: setuptools helpers test
-      run: pytest tests/extra_setuptools
 
   centos:
     runs-on: ubuntu-latest
