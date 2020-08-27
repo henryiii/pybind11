@@ -14,7 +14,7 @@ def test_simple_setup_py(monkeypatch, tmpdir):
 
     (tmpdir / "setup.py").write_text(
         dedent(
-            """\
+            u"""\
         import sys
         sys.path.append("{MAIN_DIR}")
 
@@ -41,7 +41,7 @@ def test_simple_setup_py(monkeypatch, tmpdir):
 
     (tmpdir / "main.cpp").write_text(
         dedent(
-            """\
+            u"""\
             #include <pybind11/pybind11.h>
 
             int f(int x) {
