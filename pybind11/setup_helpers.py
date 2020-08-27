@@ -36,9 +36,12 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
+import contextlib
 import os
+import shutil
 import sys
 import tempfile
+import threading
 
 import distutils.errors
 from distutils.command.build_ext import build_ext
@@ -63,6 +66,26 @@ class DelayedPybindInclude(object):
         return pybind11.get_include()
 
 
+# Just in case someone clever tries to multithread
+tmp_chdir_lock = threading.Lock()
+
+
+@contextlib.contextmanager
+def tmp_chdir():
+    "Prepare and enter a temporary directory, cleanup when done"
+    # Threadsafe
+
+    with tmp_chdir_lock:
+        olddir = os.getcwd()
+        try:
+            tmpdir = tempfile.mkdtemp()
+            os.chdir(tmpdir)
+            yield tmpdir
+        finally:
+            os.chdir(olddir)
+            shutil.rmtree(tmpdir)
+
+
 # cf http://bugs.python.org/issue26689
 def has_flag(compiler, flagname):
     """
@@ -70,25 +93,16 @@ def has_flag(compiler, flagname):
     specified compiler.
     """
 
-    with tempfile.NamedTemporaryFile("w", suffix=".cpp", delete=False) as f:
-        f.write("int main (int argc, char **argv) { return 0; }")
-        fname = f.name
-    try:
-        # distutils/ccompiler.py, unixcompiler.py, etc.
-        # compiler.compile generates output file at
-        # os.path.join(output_dir, fname[1:]) - which drops leading /,
-        # so we use output_dir == '/' to put it back on
-        # TODO: not sure what Windows does so leave it alone
-        outdir = os.path.sep if sys.platform != "win32" else None
-        compiler.compile([fname], extra_postargs=[flagname], output_dir=outdir)
-    except distutils.errors.CompileError:
-        return False
-    finally:
+    with tmp_chdir():
+        fname = "flagcheck.cpp"
+        with open(fname, "w") as f:
+            f.write("int main (int argc, char **argv) { return 0; }")
+
         try:
-            os.remove(fname)
-        except OSError:
-            pass
-    return True
+            compiler.compile([fname], extra_postargs=[flagname])
+            return True
+        except distutils.errors.CompileError:
+            return False
 
 
 def cpp_flag(compiler, value=None):

@@ -18,7 +18,7 @@ repos:
   rev: 20.8b1
   hooks:
   - id: black
-    files: ^(setup.py|pybind11|tests/test_python_package)
+    files: ^(setup.py|pybind11|tests/test_python_package|tests/extra)
 
 - repo: https://github.com/Lucas-C/pre-commit-hooks
   rev: v1.1.9
