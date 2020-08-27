@@ -65,7 +65,7 @@ def test_simple_setup_py(monkeypatch, tmpdir):
 
     (tmpdir / "test.py").write_text(
         dedent(
-            """\
+            u"""\
             import simple_setup
             assert simple_setup.f(3) == 9
         """
