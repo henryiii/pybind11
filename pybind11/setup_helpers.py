@@ -157,16 +157,12 @@ class BuildExt(build_ext):
     you set a C++ standard (None is the default search).
     """
 
-    def __init__(self, *args, **kwargs):
-        super(BuildExt, self).__init__(*args, **kwargs)
-        self.cxx_std = None
-
     def build_extensions(self):
         ct = self.compiler.compiler_type
         comp_opts = c_opts.get(ct, [])
         link_opts = l_opts.get(ct, [])
         if ct == "unix":
-            comp_opts.append(cpp_flag(self.compiler, self.cxx_std))
+            comp_opts.append(cpp_flag(self.compiler, getattr(self, "cxx_std", None)))
             if has_flag(self.compiler, "-fvisibility=hidden"):
                 comp_opts.append("-fvisibility=hidden")
 
