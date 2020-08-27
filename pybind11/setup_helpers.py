@@ -74,7 +74,6 @@ def has_flag(compiler, flagname):
         f.write("int main (int argc, char **argv) { return 0; }")
         fname = f.name
     try:
-        compiler.compile([fname], extra_postargs=[flagname])
         # distutils/ccompiler.py, unixcompiler.py, etc.
         # compiler.compile generates output file at
         # os.path.join(output_dir, fname[1:]) - which drops leading /,
