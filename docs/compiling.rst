@@ -107,10 +107,11 @@ Classic ``setup_requires``
 --------------------------
 
 If you want to support old versions of Pip with the classic
-``setup_requires=["pybind11"]`` keyword argument to setup, which triggers a
-two-phase ``setup.py`` run, then you will need to use something like this to
-ensure the first pass works (which has not yet installed the ``setup_requires``
-packages, since it can't install something it does not know about):
+``setup_requires=["pybind11"], install_requires=["pybind11"]`` keyword arguments
+to setup, which triggers a two-phase ``setup.py`` run, then you will need to
+use something like this to ensure the first pass works (which has not yet
+installed the ``setup_requires`` packages, since it can't install something it
+does not know about):
 
 .. code-block:: python
 
@@ -124,8 +125,19 @@ It doesn't matter that the Extension class is not the enhanced subclass for the
 first pass run; and the second pass will have the ``setup_requires``
 requirements.
 
-This is obviously more of a hack than the PEP 518 method, but it supports
-ancient versions of Pip.
+.. note::
+
+    This is obviously more of a hack than the PEP 518 method. It requires that
+    the package be listed in ``install_requires`` too, which means that users
+    will also have pybind11 available after your package is installed,
+    regardless of wether they had to build it, and makes it inadvisable to lock
+    the version (especially with the late-2020 pip solver), while the PEP 518
+    method only makes the dependency available during the build process, so the
+    version can easily be pinned.  This method also tends to not work in
+    cibuildwheel, conda, and other build systems, since they build with
+    ``--no-deps`` active (which does not affect PEP 518).
+
+    Under most circumstances, PEP 518 is a much better solution.
 
 .. _setup_helpers-copy-manually:
 
