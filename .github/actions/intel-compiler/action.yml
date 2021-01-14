@@ -1,0 +1,11 @@
+description: 'Run and test pybind11 on an Intel compiler'
+inputs:
+  cxxstd:
+    description: 'The version of C++ to use'
+    required: true
+name: 'Check on Intel'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.cxxstd }}
