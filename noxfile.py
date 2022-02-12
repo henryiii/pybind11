@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import nox
 
 nox.options.sessions = ["lint", "tests", "tests_packaging"]
@@ -88,6 +91,22 @@ def build(session: nox.Session) -> None:
     session.log("Building normal files")
     session.run("python", "-m", "build", *session.posargs)
     session.log("Building pybind11-global files (PYBIND11_GLOBAL_SDIST=1)")
-    session.run(
-        "python", "-m", "build", *session.posargs, env={"PYBIND11_GLOBAL_SDIST": "1"}
-    )
+
+    # Temporarily change the project name (static project metadata)
+    pyproject = Path("pyproject.toml")
+    config = pyproject.read_text("utf-8")
+    global_config = config.replace('name = "pybind11"', 'name = "pybind11_global"')
+    os.rename("pyproject.toml", ".pyproject.orig")
+    pyproject.write_text(global_config, "utf-8")
+
+    try:
+        session.run(
+            "python",
+            "-m",
+            "build",
+            *session.posargs,
+            env={"PYBIND11_GLOBAL_SDIST": "1"}
+        )
+    finally:
+        pyproject.unlink()
+        os.rename(".pyproject.orig", "pyproject.toml")
