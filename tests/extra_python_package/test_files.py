@@ -5,6 +5,8 @@ import subprocess
 import sys
 import tarfile
 import zipfile
+from contextlib import contextmanager
+from pathlib import Path
 
 # These tests must be run explicitly
 # They require CMake 3.15+ (--install)
@@ -108,19 +110,20 @@ def test_build_sdist(monkeypatch, tmpdir):
     out = subprocess.check_output(
         [
             sys.executable,
-            "setup.py",
-            "sdist",
-            "--formats=tar",
-            "--dist-dir",
+            "-m",
+            "build",
+            "--sdist",
+            "--outdir",
             str(tmpdir),
         ]
     )
     if hasattr(out, "decode"):
         out = out.decode()
 
-    (sdist,) = tmpdir.visit("*.tar")
+    print(out)
+    (sdist,) = tmpdir.visit("*.tar.gz")
 
-    with tarfile.open(str(sdist)) as tar:
+    with tarfile.open(str(sdist), "r:gz") as tar:
         start = tar.getnames()[0] + "/"
         version = start[9:-1]
         simpler = {n.split("/", 1)[-1] for n in tar.getnames()[1:]}
@@ -165,27 +168,48 @@ def test_build_sdist(monkeypatch, tmpdir):
     assert pyproject_toml == contents
 
 
+@contextmanager
+def global_package(monkeypatch):
+    pyproject = Path("pyproject.toml")
+    config = pyproject.read_text("utf-8")
+    config = config.replace('name = "pybind11"', 'name = "pybind11_global"')
+    assert 'name = "pybind11_global"' in config
+
+    os.rename("pyproject.toml", ".pyproject.orig")
+    pyproject.write_text(config, "utf-8")
+
+    try:
+        with monkeypatch.context() as m:
+            m.setenv("PYBIND11_GLOBAL_SDIST", "1")
+            yield
+    finally:
+        pyproject.unlink()
+        os.rename(".pyproject.orig", "pyproject.toml")
+
+
 def test_build_global_dist(monkeypatch, tmpdir):
 
     monkeypatch.chdir(MAIN_DIR)
-    monkeypatch.setenv("PYBIND11_GLOBAL_SDIST", "1")
 
-    out = subprocess.check_output(
-        [
-            sys.executable,
-            "setup.py",
-            "sdist",
-            "--formats=tar",
-            "--dist-dir",
-            str(tmpdir),
-        ]
-    )
+    with global_package(monkeypatch):
+        out = subprocess.check_output(
+            [
+                sys.executable,
+                "-m",
+                "build",
+                "--sdist",
+                "--outdir",
+                str(tmpdir),
+            ]
+        )
+
     if hasattr(out, "decode"):
         out = out.decode()
+    print(out)
 
-    (sdist,) = tmpdir.visit("*.tar")
+    (sdist,) = tmpdir.visit("*.tar.gz")
 
-    with tarfile.open(str(sdist)) as tar:
+    with tarfile.open(str(sdist), "r:gz") as tar:
         start = tar.getnames()[0] + "/"
         version = start[16:-1]
         simpler = {n.split("/", 1)[-1] for n in tar.getnames()[1:]}
