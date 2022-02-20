@@ -47,7 +47,7 @@ def tests_packaging(session: nox.Session) -> None:
     """
 
     session.install("-r", "tests/requirements.txt", "--prefer-binary")
-    session.run("pytest", "tests/extra_python_package")
+    session.run("pytest", "tests/extra_python_package", *session.posargs)
 
 
 @nox.session(reuse_venv=True)
