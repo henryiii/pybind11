@@ -443,55 +443,6 @@ PYBIND11_WARNING_POP
     }                                                                                             \
     PyObject *pybind11_init()
 
-#define PYBIND11_MODULE_2(name, variable)                                                           \
-    static ::pybind11::module_::module_def PYBIND11_CONCAT(pybind11_module_def_, name)              \
-        PYBIND11_MAYBE_UNUSED;                                                                      \
-    PYBIND11_MAYBE_UNUSED                                                                           \
-    static void PYBIND11_CONCAT(pybind11_init_, name)(::pybind11::module_ &);                       \
-    PYBIND11_PLUGIN_IMPL(name) {                                                                    \
-        PYBIND11_CHECK_PYTHON_VERSION                                                               \
-        PYBIND11_ENSURE_INTERNALS_READY                                                             \
-        auto m = ::pybind11::module_::create_extension_module(                                    \
-            PYBIND11_TOSTRING(name),                                                              \
-            nullptr,                                                                              \
-            &PYBIND11_CONCAT(pybind11_module_def_, name),                                         \
-        try {                                                                                     \
-            PYBIND11_CONCAT(pybind11_init_, name)(m);                                             \
-            return m.ptr();                                                                       \
-        }                                                                                         \
-        PYBIND11_CATCH_INIT_EXCEPTIONS                                                              \
-    }                                                                                               \
-    void PYBIND11_CONCAT(pybind11_init_, name)(::pybind11::module_ & (variable))
-
-#define PYBIND11_MODULE_3(name, variable, ...)                                                    \
-    static ::pybind11::module_::module_def PYBIND11_CONCAT(pybind11_module_def_, name)            \
-        PYBIND11_MAYBE_UNUSED;                                                                    \
-    PYBIND11_MAYBE_UNUSED                                                                         \
-    static void PYBIND11_CONCAT(pybind11_init_, name)(::pybind11::module_ &);                     \
-    PYBIND11_PLUGIN_IMPL(name) {                                                                  \
-        PYBIND11_CHECK_PYTHON_VERSION                                                             \
-        PYBIND11_ENSURE_INTERNALS_READY                                                           \
-        auto m = ::pybind11::module_::create_extension_module(                                    \
-            PYBIND11_TOSTRING(name),                                                              \
-            nullptr,                                                                              \
-            &PYBIND11_CONCAT(pybind11_module_def_, name),                                         \
-            __VA_ARGS__);                                                                         \
-        try {                                                                                     \
-            PYBIND11_CONCAT(pybind11_init_, name)(m);                                             \
-            return m.ptr();                                                                       \
-        }                                                                                         \
-        PYBIND11_CATCH_INIT_EXCEPTIONS                                                            \
-    }                                                                                             \
-    void PYBIND11_CONCAT(pybind11_init_, name)(::pybind11::module_ & (variable))
-
-#define _PYBIND11_MODULE_CHOOSER2(count) PYBIND11_MODULE_##count
-#define _PYBIND11_MODULE_CHOOSER1(count) _PYBIND11_MODULE_CHOOSER2(count)
-#define _PYBIND11_MODULE_CHOOSER(count) _PYBIND11_MODULE_CHOOSER1(count)
-
-#define _PYBIND11_COUNT_ARGS_IMPL2(_1, _2, _3, COUNT, ...) COUNT
-#define _PYBIND11_COUNT_ARGS_IMPL(args) _PYBIND11_COUNT_ARGS_IMPL2 args
-#define _PYBIND11_COUNT_ARGS(...) _PYBIND11_COUNT_ARGS_IMPL((__VA_ARGS__, 3, 2, 1))
-
 /** \rst
     This macro creates the entry point that will be invoked when the Python interpreter
     imports an extension module. The module name is given as the first argument and it
@@ -513,8 +464,26 @@ PYBIND11_WARNING_POP
             });
         }
 \endrst */
-#define PYBIND11_MODULE(...)                                                                      \
-    _PYBIND11_MODULE_CHOOSER(_PYBIND11_COUNT_ARGS(__VA_ARGS__))(__VA_ARGS__)
+#define PYBIND11_MODULE(name, variable, ...)                                                      \
+    static ::pybind11::module_::module_def PYBIND11_CONCAT(pybind11_module_def_, name)            \
+        PYBIND11_MAYBE_UNUSED;                                                                    \
+    PYBIND11_MAYBE_UNUSED                                                                         \
+    static void PYBIND11_CONCAT(pybind11_init_, name)(::pybind11::module_ &);                     \
+    PYBIND11_PLUGIN_IMPL(name) {                                                                  \
+        PYBIND11_CHECK_PYTHON_VERSION                                                             \
+        PYBIND11_ENSURE_INTERNALS_READY                                                           \
+        auto m = ::pybind11::module_::create_extension_module(                                    \
+            PYBIND11_TOSTRING(name),                                                              \
+            nullptr,                                                                              \
+            &PYBIND11_CONCAT(pybind11_module_def_, name),                                         \
+            ##__VA_ARGS__);                                                                       \
+        try {                                                                                     \
+            PYBIND11_CONCAT(pybind11_init_, name)(m);                                             \
+            return m.ptr();                                                                       \
+        }                                                                                         \
+        PYBIND11_CATCH_INIT_EXCEPTIONS                                                            \
+    }                                                                                             \
+    void PYBIND11_CONCAT(pybind11_init_, name)(::pybind11::module_ & (variable))
 
 PYBIND11_NAMESPACE_BEGIN(PYBIND11_NAMESPACE)
 
