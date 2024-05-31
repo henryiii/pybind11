@@ -1321,7 +1321,7 @@ private:
     static module_ _create_extension_module(const char *name,
                                             const char *doc,
                                             module_def *def,
-                                            PYBIND11_MAYBE_UNUSED bool gil_disabled) {
+                                            bool gil_disabled) {
 
         // module_def is PyModuleDef
         // Placement new (not an allocation).
@@ -1342,11 +1342,11 @@ private:
             }
             pybind11_fail("Internal error in module_::create_extension_module()");
         }
-#ifdef Py_GIL_DISABLED
         if (gil_disabled) {
+#ifdef Py_GIL_DISABLED
             PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED);
-        }
 #endif
+        }
         // TODO: Should be reinterpret_steal for Python 3, but Python also steals it again when
         //       returned from PyInit_...
         //       For Python 2, reinterpret_borrow was correct.
