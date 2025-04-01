@@ -25,7 +25,7 @@ New Features:
   or ``map()`` in many common situations.
   `#4686 <https://github.com/pybind/pybind11/pull/4686>`_
 
-* Support for CMake older than 3.15 removed. CMake 3.15-3.30 supported.
+* Support for CMake older than 3.15 removed. CMake 3.15-4.0 supported.
   `#5304 <https://github.com/pybind/pybind11/pull/5304>`_
 
 * The ``array_caster`` in pybind11/stl.h was enhanced to support value types that are not default-constructible.
