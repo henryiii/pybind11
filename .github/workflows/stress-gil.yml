@@ -14,13 +14,15 @@ env:
 
 jobs:
   stress:
-    name: stress ${{ matrix.replica }}
+    name: stress ${{ matrix.replica }} fresh=${{ matrix.fresh }} load=${{ matrix.load }}
     runs-on: windows-latest
     timeout-minutes: 75
     strategy:
       fail-fast: false
       matrix:
-        replica: [1, 2, 3, 4]
+        replica: [1, 2]
+        fresh: [0, 1]
+        load: [0, 4]
 
     steps:
       - uses: actions/checkout@v7
@@ -72,11 +74,11 @@ jobs:
         shell: pwsh
         run: |
           $pyd = Get-ChildItem build -Recurse -Filter "pybind11_tests*.pyd" | Select-Object -First 1
-          python .github/stress/driver.py --tests-dir $pyd.DirectoryName --source-tests "$PWD\tests" --minutes 30 --jobs 6 --pdb-dir "$PWD\pdbflat" --out stress-out
+          python .github/stress/driver.py --tests-dir $pyd.DirectoryName --source-tests "$PWD\tests" --minutes 30 --jobs 6 --pdb-dir "$PWD\pdbflat" --out stress-out --fresh-copy ${{ matrix.fresh }} --load ${{ matrix.load }}
 
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: stress-${{ matrix.replica }}
+          name: stress-${{ matrix.replica }}-${{ matrix.fresh }}-${{ matrix.load }}
           path: stress-out
           if-no-files-found: ignore

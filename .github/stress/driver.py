@@ -7,6 +7,7 @@ import ctypes
 import glob
 import multiprocessing
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -22,6 +23,8 @@ parser.add_argument("--max-hangs", type=int, default=3)
 parser.add_argument("--out", default="stress-out")
 parser.add_argument("--pdb-dir", default="")
 parser.add_argument("--worker", type=int, default=None)
+parser.add_argument("--fresh-copy", type=int, default=0)
+parser.add_argument("--load", type=int, default=0)
 args = parser.parse_args()
 
 PYDLL = f"python{sys.version_info.major}{sys.version_info.minor}t"
@@ -99,8 +102,12 @@ def drain(reader):
 
 
 def run_worker():
-    sys.path[:0] = [args.tests_dir, args.source_tests]
+    # Slot 0 is replaced per run when --fresh-copy is set.
+    sys.path[:0] = [args.tests_dir, args.tests_dir, args.source_tests]
     import test_gil_scoped as t
+
+    cross_files = glob.glob(os.path.join(args.tests_dir, "cross_module_gil_utils*.*"))
+    cross_files = [f for f in cross_files if f.endswith((".pyd", ".so"))]
 
     cases = (
         ("acquired", (t.test_cross_module_gil_acquired,), False),
@@ -119,6 +126,15 @@ def run_worker():
     while time.monotonic() < deadline and hangs < args.max_hangs:
         name, test_fns, parallel = cases[iteration % len(cases)]
         iteration += 1
+        fresh = None
+        if args.fresh_copy:
+            # A new file path makes the first load in the worker thread cold
+            # (file cache, antivirus scan), as in a single CI run.
+            fresh = out / f"fresh-{iteration}"
+            fresh.mkdir()
+            for path in cross_files:
+                shutil.copy(path, fresh)
+            sys.path[0] = str(fresh)
         status_reader, status_writer = multiprocessing.Pipe(duplex=False)
         progress_reader, progress_writer = multiprocessing.Pipe(duplex=False)
         with status_reader, status_writer, progress_reader, progress_writer:
@@ -161,6 +177,8 @@ def run_worker():
                 process.terminate()
                 process.join()
                 continue
+            if fresh is not None:
+                shutil.rmtree(fresh, ignore_errors=True)
             runs += 1
             if process.exitcode != 0:
                 errors += 1
@@ -184,5 +202,10 @@ if __name__ == "__main__":
             subprocess.Popen([sys.executable, __file__, *sys.argv[1:], "--worker", str(n)])
             for n in range(args.jobs)
         ]
+        load = [
+            subprocess.Popen([sys.executable, "-c", "while True: pass"]) for _ in range(args.load)
+        ]
         for proc in procs:
             proc.wait()
+        for proc in load:
+            proc.kill()
