@@ -72,7 +72,7 @@ jobs:
         shell: pwsh
         run: |
           $pyd = Get-ChildItem build -Recurse -Filter "pybind11_tests*.pyd" | Select-Object -First 1
-          python .github/stress/driver.py --tests-dir $pyd.DirectoryName --minutes 30 --jobs 6 --pdb-dir "$PWD\pdbflat" --out stress-out
+          python .github/stress/driver.py --tests-dir $pyd.DirectoryName --source-tests "$PWD\tests" --minutes 30 --jobs 6 --pdb-dir "$PWD\pdbflat" --out stress-out
 
       - uses: actions/upload-artifact@v7
         if: always()
