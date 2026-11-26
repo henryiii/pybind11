@@ -1,0 +1,82 @@
+name: Stress GIL deadlock
+
+on:
+  push:
+    branches:
+      - stress/gil-deadlock
+
+permissions:
+  contents: read
+
+env:
+  PYTHONDEVMODE: 1
+  PIP_ONLY_BINARY: numpy
+
+jobs:
+  stress:
+    name: stress ${{ matrix.replica }}
+    runs-on: windows-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        replica: [1, 2, 3, 4]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Python
+        id: python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.14t'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.3
+
+      - name: Prepare env
+        run: uv pip install --python=python --system -r tests/requirements.txt setuptools
+
+      - name: Configure
+        run: >
+          cmake -S. -Bbuild
+          -DPYBIND11_WERROR=ON
+          -DDOWNLOAD_CATCH=ON
+          -DDOWNLOAD_EIGEN=ON
+          -DPYBIND11_EIGEN_REPO=https://github.com/eigen-mirror/eigen.git
+          -DPYBIND11_TEST_OVERRIDE=test_gil_scoped
+          -DPYTHON_EXECUTABLE=${{ steps.python.outputs.python-path }}
+          -DCMAKE_CXX_STANDARD=23
+
+      - name: Build
+        run: cmake --build build --target pybind11_tests cross_module_gil_utils
+
+      - name: Python symbols (best effort)
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $ver = python -c "import platform; print(platform.python_version())"
+          New-Item -ItemType Directory -Force pdb, pdbflat | Out-Null
+          foreach ($name in "freethreaded_pdb", "core_pdb", "exe_pdb", "lib_pdb") {
+            $url = "https://www.python.org/ftp/python/$ver/amd64/$name.msi"
+            try {
+              Invoke-WebRequest $url -OutFile "$name.msi"
+              Start-Process msiexec -Wait -ArgumentList "/a", "$PWD\$name.msi", "/qn", "TARGETDIR=$PWD\pdb\$name"
+            } catch { Write-Host "no $url" }
+          }
+          Get-ChildItem pdb -Recurse -Filter *.pdb | Copy-Item -Destination pdbflat -Force
+          Get-ChildItem pdbflat
+          Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe"
+
+      - name: Stress
+        shell: pwsh
+        run: |
+          $pyd = Get-ChildItem build -Recurse -Filter "pybind11_tests*.pyd" | Select-Object -First 1
+          python .github/stress/driver.py --tests-dir $pyd.DirectoryName --minutes 30 --jobs 6 --pdb-dir "$PWD\pdbflat" --out stress-out
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: stress-${{ matrix.replica }}
+          path: stress-out
+          if-no-files-found: ignore
