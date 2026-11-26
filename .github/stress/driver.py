@@ -142,8 +142,12 @@ def run_worker():
                     f"===== HANG worker={args.worker} n={hangs} case={name} "
                     f"pid={process.pid} after {runs} runs",
                     f"status={drain(status_reader)} progress={drain(progress_reader)}",
-                    "--- faulthandler\n" + Path(traceback_path).read_text(errors="replace"),
                 ]
+                try:
+                    dump = Path(traceback_path).read_text(errors="replace")
+                except OSError as error:
+                    dump = repr(error)
+                lines.append("--- faulthandler\n" + dump)
                 if sys.platform == "win32":
                     try:
                         handle = int(process._popen._handle)
